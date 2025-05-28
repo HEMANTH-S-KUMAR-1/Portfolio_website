@@ -22,7 +22,7 @@ const skillsData = {
     programming: [
         { name: 'C/C++', level: 90 },
         { name: 'Python', level: 85 },
-        { name: 'HTML/CSS', level: 80 }
+        { name: 'HTML/CSS/JavaScript', level: 85 }
     ],
     microcontrollers: [
         { name: 'ESP32', level: 95 },
@@ -91,7 +91,7 @@ function toggleDetails(element) {
 }
 
 // Backend Integration
-const BACKEND_URL = process.env.BACKEND_URL || 'https://portfolio-backend.onrender.com';
+const BACKEND_URL = 'https://portfolio-backend.onrender.com';
 
 async function performCalculation(input) {
     try {
@@ -104,23 +104,28 @@ async function performCalculation(input) {
         });
 
         if (!response.ok) {
-            throw new Error('Calculation failed');
+            console.log('Calculation service unavailable');
+            return null;
         }
 
         const data = await response.json();
         return data.result;
     } catch (error) {
-        console.error('Error performing calculation:', error);
-        showNotification('Error performing calculation. Please try again.');
+        console.log('Calculation service unavailable');
         return null;
     }
 }
 
 // Project Interactions
 async function openProject(projectId) {
-    // Perform a sample calculation
-    const sampleInput = 42;
-    const result = await performCalculation(sampleInput);
+    let result = null;
+    try {
+        // Attempt calculation but don't block project display if it fails
+        const sampleInput = 42;
+        result = await performCalculation(sampleInput);
+    } catch (error) {
+        console.log('Calculation skipped - showing project details anyway');
+    }
     
     const projectDetails = {
         elevator: {
@@ -162,7 +167,12 @@ async function openProject(projectId) {
     };
     
     const project = projectDetails[projectId];
-    const message = `🚀 ${project.title}\n\n${project.description}\n\nKey Features:\n• ${project.features.join('\n• ')}\n\nTechnologies: ${project.tech.join(', ')}\n\nImpact: ${project.impact}`;
+    if (!project) {
+        showNotification('Project details not found. Please try again.');
+        return;
+    }
+    
+    let message = `🚀 ${project.title}\n\n${project.description}\n\nKey Features:\n• ${project.features.join('\n• ')}\n\nTechnologies: ${project.tech.join(', ')}\n\nImpact: ${project.impact}`;
     
     if (result !== null) {
         message += `\n\nCalculation Result: ${result}`;
@@ -173,9 +183,13 @@ async function openProject(projectId) {
 
 // Contact Interactions
 function copyEmail() {
-    navigator.clipboard.writeText('hemanth.1si22ei049@gmail.com').then(() => {
-        showNotification('Email copied to clipboard! 📧');
-    });
+    navigator.clipboard.writeText('hemanth.1si22ei049@gmail.com')
+        .then(() => {
+            showNotification('Email copied to clipboard! 📧');
+        })
+        .catch(() => {
+            showNotification('Failed to copy email. Please try again or copy manually.');
+        });
 }
 
 function callPhone() {
@@ -187,8 +201,107 @@ function openGitHub() {
 }
 
 function startProject() {
-    const message = encodeURIComponent('Hi Hemanth! I\'d love to collaborate on an exciting embedded systems project. Let\'s innovate together!');
-    window.open(`mailto:hemanth.1si22ei049@gmail.com?subject=Project Collaboration&body=${message}`);
+    const email = 'hemanth.1si22ei049@gmail.com';
+    const subject = 'Project Collaboration';
+    const body = 'Hi Hemanth! I\'d love to collaborate on an exciting embedded systems project. Let\'s innovate together!';
+    
+    // Create a modal for email options
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--primary-bg);
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        z-index: 1000;
+        text-align: center;
+        border: 2px solid var(--accent-cyan);
+    `;
+    
+    modal.innerHTML = `
+        <h3 style="margin-bottom: 1rem; color: var(--accent-cyan);">Choose Email Option</h3>
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <button onclick="openGmail()" style="
+                padding: 0.8rem 1.5rem;
+                background: linear-gradient(45deg, var(--accent-pink), var(--accent-orange));
+                border: none;
+                border-radius: 5px;
+                color: white;
+                cursor: pointer;
+                font-weight: bold;
+            ">Open in Gmail</button>
+            <button onclick="openDesktopEmail()" style="
+                padding: 0.8rem 1.5rem;
+                background: linear-gradient(45deg, var(--accent-cyan), var(--accent-green));
+                border: none;
+                border-radius: 5px;
+                color: white;
+                cursor: pointer;
+                font-weight: bold;
+            ">Open in Email App</button>
+        </div>
+        <button onclick="closeModal()" style="
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: 1px solid var(--accent-cyan);
+            border-radius: 5px;
+            color: var(--accent-cyan);
+            cursor: pointer;
+        ">Cancel</button>
+    `;
+    
+    // Add overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 999;
+    `;
+    
+    document.body.appendChild(overlay);
+    document.body.appendChild(modal);
+    
+    // Prevent scrolling when modal is open
+    document.body.style.overflow = 'hidden';
+}
+
+function openGmail() {
+    const email = 'hemanth.1si22ei049@gmail.com';
+    const subject = 'Project Collaboration';
+    const body = 'Hi Hemanth! I\'d love to collaborate on an exciting embedded systems project. Let\'s innovate together!';
+    
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, '_blank');
+    closeModal();
+}
+
+function openDesktopEmail() {
+    const email = 'hemanth.1si22ei049@gmail.com';
+    const subject = 'Project Collaboration';
+    const body = 'Hi Hemanth! I\'d love to collaborate on an exciting embedded systems project. Let\'s innovate together!';
+    
+    const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(mailtoLink, '_blank');
+    closeModal();
+}
+
+function closeModal() {
+    const modal = document.querySelector('div[style*="position: fixed"]');
+    const overlay = document.querySelector('div[style*="background: rgba(0, 0, 0, 0.7)"]');
+    
+    if (modal) document.body.removeChild(modal);
+    if (overlay) document.body.removeChild(overlay);
+    
+    // Restore scrolling
+    document.body.style.overflow = 'auto';
 }
 
 function showNotification(message) {

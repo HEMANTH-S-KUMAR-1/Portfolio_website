@@ -20,30 +20,30 @@ function toggleStory() {
 // Skills Section
 const skillsData = {
     programming: [
-        { name: 'C/C++', level: 90 },
-        { name: 'Python', level: 85 },
-        { name: 'HTML/CSS/JavaScript', level: 85 }
+        { name: 'C/C++', level: 68 },
+        { name: 'Python', level: 67 },
+        { name: 'HTML/CSS/JavaScript', level: 69 }
     ],
     microcontrollers: [
-        { name: 'ESP32', level: 95 },
-        { name: 'Raspberry Pi', level: 90 },
-        { name: 'Arduino', level: 85 }
+        { name: 'ESP32', level: 70 },
+        { name: 'Raspberry Pi', level: 66 },
+        { name: 'Arduino', level: 65 }
     ],
     tools: [
-        { name: 'MATLAB', level: 80 },
-        { name: 'Multisim', level: 75 },
-        { name: 'LabVIEW', level: 70 },
-        { name: 'Cadence', level: 65 }
+        { name: 'MATLAB', level: 68 },
+        { name: 'Multisim', level: 67 },
+        { name: 'LabVIEW', level: 69 },
+        { name: 'Cadence', level: 66 }
     ],
     protocols: [
-        { name: 'UART', level: 90 },
-        { name: 'SPI', level: 85 },
-        { name: 'I2C', level: 85 },
-        { name: 'CAN', level: 75 }
+        { name: 'UART', level: 70 },
+        { name: 'SPI', level: 68 },
+        { name: 'I2C', level: 67 },
+        { name: 'CAN', level: 65 }
     ],
     other: [
-        { name: 'Linux', level: 80 },
-        { name: 'Git', level: 85 }
+        { name: 'Linux', level: 69 },
+        { name: 'Git', level: 70 }
     ]
 };
 
@@ -58,7 +58,7 @@ function showSkills(category) {
             <div class="skill-item">
                 <span>${skill.name}</span>
                 <div class="skill-bar">
-                    <div class="skill-progress" style="width: ${skill.level}%"></div>
+                    <div class="skill-progress" style="width: 0%"></div>
                 </div>
             </div>
         `;
@@ -70,11 +70,9 @@ function showSkills(category) {
     // Animate progress bars
     setTimeout(() => {
         const progressBars = skillDetails.querySelectorAll('.skill-progress');
-        progressBars.forEach(bar => {
-            bar.style.width = '0%';
-            setTimeout(() => {
-                bar.style.width = bar.style.width;
-            }, 100);
+        progressBars.forEach((bar, index) => {
+            const targetWidth = skills[index].level + '%';
+            bar.style.width = targetWidth;
         });
     }, 100);
 }
@@ -95,6 +93,7 @@ const BACKEND_URL = 'https://portfolio-backend.onrender.com';
 
 async function performCalculation(input) {
     try {
+        showNotification('Calculating...', 'loading');
         const response = await fetch(`${BACKEND_URL}/calculate`, {
             method: 'POST',
             headers: {
@@ -104,14 +103,15 @@ async function performCalculation(input) {
         });
 
         if (!response.ok) {
-            console.log('Calculation service unavailable');
-            return null;
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
+        showNotification('Calculation complete!', 'success');
         return data.result;
     } catch (error) {
-        console.log('Calculation service unavailable');
+        console.error('Calculation service error:', error);
+        showNotification('Calculation failed. Please try again.', 'error');
         return null;
     }
 }
@@ -183,17 +183,64 @@ async function openProject(projectId) {
 
 // Contact Interactions
 function copyEmail() {
-    navigator.clipboard.writeText('hemanth.1si22ei049@gmail.com')
-        .then(() => {
-            showNotification('Email copied to clipboard! 📧');
-        })
-        .catch(() => {
-            showNotification('Failed to copy email. Please try again or copy manually.');
-        });
+    const email = 'hemanth.1si22ei049@gmail.com';
+    
+    // Try using the Clipboard API first
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(email)
+            .then(() => {
+                showNotification('Email copied to clipboard! 📧');
+            })
+            .catch(() => {
+                fallbackCopyEmail(email);
+            });
+    } else {
+        fallbackCopyEmail(email);
+    }
 }
 
-function callPhone() {
-    window.open('tel:+919740029755');
+function fallbackCopyEmail(email) {
+    // Create a temporary input element
+    const textArea = document.createElement('textarea');
+    textArea.value = email;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        showNotification('Email copied to clipboard! 📧');
+    } catch (err) {
+        showNotification('Failed to copy email. Please copy manually: ' + email);
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+function downloadCV() {
+    // Using a relative path to the CV file
+    const cvUrl = 'assets/Hemanth_S_Kumar_CV.pdf';
+    
+    // Create a temporary link element
+    const link = document.createElement('a');
+    link.href = cvUrl;
+    link.download = 'Hemanth_S_Kumar_CV.pdf';
+    link.target = '_blank';
+    
+    // Add error handling
+    link.onerror = () => {
+        showNotification('Failed to download CV. Please try again later.');
+    };
+    
+    // Append to body, click, and remove
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification('Downloading CV... 📄');
 }
 
 function openGitHub() {
@@ -304,31 +351,55 @@ function closeModal() {
     document.body.style.overflow = 'auto';
 }
 
-function showNotification(message) {
+function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    // Add styles
     notification.style.cssText = `
         position: fixed;
-        top: 20px;
+        bottom: 20px;
         right: 20px;
-        background: linear-gradient(45deg, var(--accent-green), var(--accent-cyan));
-        color: var(--primary-bg);
-        padding: 1rem 2rem;
-        border-radius: 50px;
-        font-weight: bold;
+        padding: 15px 25px;
+        background: ${type === 'error' ? '#ff4444' : type === 'success' ? '#00C851' : type === 'loading' ? '#33b5e5' : '#2BBBAD'};
+        color: white;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         z-index: 1000;
-        animation: slideInRight 0.5s ease, fadeOut 0.5s ease 2.5s;
+        animation: slideIn 0.5s ease-out;
     `;
-    notification.textContent = message;
+    
     document.body.appendChild(notification);
     
+    // Auto remove after 3 seconds
     setTimeout(() => {
-        document.body.removeChild(notification);
+        notification.style.animation = 'slideOut 0.5s ease-out';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 500);
     }, 3000);
 }
+
+// Add animation keyframes
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
 
 // Dynamic background circuit animation
 function createCircuitLine() {
     const circuitBg = document.querySelector('.circuit-bg');
+    
+    // Create main circuit line
     const line = document.createElement('div');
     line.className = 'circuit-line';
     
@@ -349,15 +420,67 @@ function createCircuitLine() {
     
     circuitBg.appendChild(line);
     
+    // Create circuit dots
+    const dot = document.createElement('div');
+    dot.className = 'circuit-dot';
+    dot.style.cssText = `
+        top: ${top}%;
+        left: ${left + width}%;
+        animation-delay: ${delay + 0.5}s;
+    `;
+    
+    circuitBg.appendChild(dot);
+    
+    // Create circuit node
+    const node = document.createElement('div');
+    node.className = 'circuit-node';
+    node.style.cssText = `
+        top: ${top + Math.random() * 20 - 10}%;
+        left: ${left + Math.random() * width}%;
+        animation-delay: ${delay + 1}s;
+    `;
+    
+    circuitBg.appendChild(node);
+    
+    // Create circuit connection
+    const connection = document.createElement('div');
+    connection.className = 'circuit-connection';
+    connection.style.cssText = `
+        width: ${Math.random() * 100 + 50}px;
+        top: ${top + Math.random() * 20}%;
+        left: ${left + Math.random() * width}%;
+        transform: rotate(${Math.random() * 360}deg);
+        animation-delay: ${delay + 1.5}s;
+    `;
+    
+    circuitBg.appendChild(connection);
+    
+    // Create floating particles
+    for (let i = 0; i < 3; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'circuit-particle';
+        particle.style.cssText = `
+            top: ${Math.random() * 100}%;
+            left: ${Math.random() * 100}%;
+            animation-delay: ${Math.random() * 5}s;
+        `;
+        circuitBg.appendChild(particle);
+    }
+    
     // Remove after animation
     setTimeout(() => {
-        if (circuitBg.contains(line)) {
-            circuitBg.removeChild(line);
-        }
+        if (circuitBg.contains(line)) circuitBg.removeChild(line);
+        if (circuitBg.contains(dot)) circuitBg.removeChild(dot);
+        if (circuitBg.contains(node)) circuitBg.removeChild(node);
+        if (circuitBg.contains(connection)) circuitBg.removeChild(connection);
+        const particles = circuitBg.querySelectorAll('.circuit-particle');
+        particles.forEach(particle => {
+            if (circuitBg.contains(particle)) circuitBg.removeChild(particle);
+        });
     }, 6000);
 }
 
-// Create new circuit lines periodically
+// Create new circuit elements periodically
 setInterval(createCircuitLine, 2000);
 
 // Smooth scrolling for navigation

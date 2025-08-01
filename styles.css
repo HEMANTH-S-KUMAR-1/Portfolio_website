@@ -124,9 +124,10 @@ body {
 .hero .dynamic-tagline {
     font-size: clamp(1rem, 3vw, 1.5rem);
     color: var(--secondary-text);
-    margin-bottom: 2rem;
-    height: 2rem;
+    /* FIX: Removed fixed height and adjusted margin to prevent overlap. */
+    margin-block: 1rem 2rem; 
     animation: fadeIn 1s ease-out 0.3s both;
+    max-width: 90%; /* Prevents text from touching screen edges on small screens. */
 }
 
 .interactive-prompt {
@@ -138,6 +139,7 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     animation: fadeIn 1s ease-out 0.6s both;
+    max-width: 90%; /* Prevents text from touching screen edges on small screens. */
 }
 
 .interactive-prompt:hover {

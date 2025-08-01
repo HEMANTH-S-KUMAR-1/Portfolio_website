@@ -1,64 +1,122 @@
-// Hero Section Interactions
-function scrollToProjects() {
-    document.getElementById('projects').scrollIntoView({ behavior: 'smooth' });
-}
+// --- Event Listener for DOMContentLoaded ---
+// Ensures the script runs only after the entire HTML document has been loaded and parsed.
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize animations for sections to fade in as they are scrolled into view.
+    setupIntersectionObserver();
+    // Create the animated particles for the background.
+    createCircuitParticles();
 
-// About Section Toggle
-function toggleStory() {
-    const story = document.getElementById('detailedStory');
-    const btn = document.querySelector('.explore-btn');
-    
-    if (story.classList.contains('expanded')) {
-        story.classList.remove('expanded');
-        btn.textContent = 'Explore My Story';
-    } else {
-        story.classList.add('expanded');
-        btn.textContent = 'Hide Story';
+    // Set the first skill category as active and display its skills by default.
+    const firstCategory = document.querySelector('.skill-category');
+    if (firstCategory) {
+        // Extracts the category name from the onclick attribute (e.g., 'firmware').
+        const categoryName = firstCategory.getAttribute('onclick').match(/'([^']+)'/)[1];
+        showSkills(categoryName);
     }
-}
+});
 
-// Skills Section
+// --- Data Objects Synchronized with CV ---
+// This object holds all the skill data. Updating it here will automatically update the website.
 const skillsData = {
-    programming: [
-        { name: 'C/C++', level: 68 },
-        { name: 'Python', level: 67 },
-        { name: 'HTML/CSS/JavaScript', level: 69 }
+    firmware: [
+        { name: 'C', level: 85 },
+        { name: 'C++', level: 90 },
+        { name: 'Python (for scripting)', level: 75 },
+        { name: 'Verilog', level: 60 }
     ],
-    microcontrollers: [
-        { name: 'ESP32', level: 70 },
-        { name: 'Raspberry Pi', level: 66 },
-        { name: 'Arduino', level: 65 }
+    hardware: [
+        { name: 'Microcontrollers (ESP32, Pi, Arduino)', level: 90 },
+        { name: 'Digital & Analog Circuit Design', level: 85 },
+        { name: 'Control Systems', level: 80 },
+        { name: 'Sensor Integration', level: 95 },
+        { name: 'PCB Design Basics', level: 70 }
     ],
     tools: [
-        { name: 'MATLAB', level: 68 },
-        { name: 'Multisim', level: 67 },
-        { name: 'LabVIEW', level: 69 },
-        { name: 'Cadence', level: 66 }
+        { name: 'MATLAB & Simulink', level: 80 },
+        { name: 'LabVIEW', level: 75 },
+        { name: 'Cadence', level: 70 },
+        { name: 'Multisim', level: 85 },
+        { name: 'Git, VS Code, Linux', level: 90 }
     ],
     protocols: [
-        { name: 'UART', level: 70 },
-        { name: 'SPI', level: 68 },
-        { name: 'I2C', level: 67 },
-        { name: 'CAN', level: 65 }
-    ],
-    other: [
-        { name: 'Linux', level: 69 },
-        { name: 'Git', level: 70 }
+        { name: 'I2C', level: 90 },
+        { name: 'SPI', level: 85 },
+        { name: 'UART', level: 95 },
+        { name: 'CAN Bus', level: 75 }
     ]
 };
 
+// This object holds all the project details.
+const projectDetails = {
+    elevator: {
+        title: 'Real-Time Elevator Safety System',
+        description: 'Engineered a safety-critical system with custom C++ firmware to automatically detect elevator power failures and passenger occupancy.',
+        features: [
+            'Integrated and calibrated an HX711 load cell for accurate occupancy detection.',
+            'Implemented a GSM module to autonomously send SMS alerts to maintenance.',
+            'Designed for rapid hardware response in critical situations.'
+        ],
+        tech: ['ESP32', 'C++', 'HX711 Load Cell', 'GSM Module', 'Sensors'],
+        impact: 'Dramatically enhances passenger safety and reduces maintenance response time during power outages.'
+    },
+    stethograph: {
+        title: 'Multichannel Stethograph for Cardiac Monitoring',
+        description: 'Developed a non-invasive cardiac monitoring device using a Raspberry Pi to capture and process heart signals from specialized vibration sensors.',
+        features: [
+            'Implemented digital signal processing algorithms in Python to filter noise.',
+            'Successfully identified key cardiac events from vibration data.',
+            'Focused on non-invasive and accessible healthcare technology.'
+        ],
+        tech: ['Raspberry Pi 3B', 'Python', 'Vibration Sensors', 'Signal Processing Libraries'],
+        impact: 'Provides a novel, non-invasive method for identifying potential cardiac irregularities.'
+    },
+    iot: {
+        title: 'IoT Automation and Monitoring Prototypes',
+        description: 'Designed and built a series of IoT prototypes for home automation and environmental monitoring, focusing on robust hardware and reliable firmware.',
+        features: [
+            'Firmware for real-time data acquisition from various analog and digital sensors.',
+            'Established wireless communication for remote control and monitoring.',
+            'Focused on creating reliable and scalable smart systems.'
+        ],
+        tech: ['ESP32', 'Arduino', 'C++', 'Various Sensors'],
+        impact: 'Demonstrates strong capabilities in end-to-end IoT solution development, from hardware to remote interface.'
+    }
+};
+
+// --- Interaction Functions ---
+
+/**
+ * Toggles the visibility of the "About Me" story section.
+ */
+function toggleStory() {
+    const story = document.getElementById('detailedStory');
+    const btn = document.querySelector('.explore-btn');
+    const isExpanded = story.classList.toggle('expanded');
+    btn.textContent = isExpanded ? 'Hide Story' : 'Explore My Story';
+}
+
+/**
+ * Displays the skills for a given category.
+ * @param {string} category - The category of skills to display (e.g., 'firmware').
+ */
 function showSkills(category) {
     const skillDetails = document.getElementById('skillDetails');
     const skills = skillsData[category];
-    
-    let html = `<h3>${category.charAt(0).toUpperCase() + category.slice(1)} Skills</h3>`;
-    
+    if (!skills) return;
+
+    // Highlight the active skill category button.
+    document.querySelectorAll('.skill-category').forEach(cat => cat.classList.remove('active'));
+    const activeCategory = document.querySelector(`.skill-category[onclick="showSkills('${category}')"]`);
+    if(activeCategory) activeCategory.classList.add('active');
+
+    // Generate the HTML for the skill bars.
+    let html = `<h3>${category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' ')}</h3>`;
     skills.forEach(skill => {
         html += `
             <div class="skill-item">
                 <span>${skill.name}</span>
                 <div class="skill-bar">
-                    <div class="skill-progress" style="width: 0%"></div>
+                    <div class="skill-progress" style="width: 0%;"></div>
                 </div>
             </div>
         `;
@@ -66,476 +124,179 @@ function showSkills(category) {
     
     skillDetails.innerHTML = html;
     skillDetails.style.display = 'block';
-    
-    // Animate progress bars
+
+    // Animate the progress bars to their target width.
     setTimeout(() => {
-        const progressBars = skillDetails.querySelectorAll('.skill-progress');
-        progressBars.forEach((bar, index) => {
-            const targetWidth = skills[index].level + '%';
-            bar.style.width = targetWidth;
+        skillDetails.querySelectorAll('.skill-progress').forEach((bar, index) => {
+            bar.style.width = `${skills[index].level}%`;
         });
     }, 100);
 }
 
-// Timeline Details Toggle
+/**
+ * Toggles the visibility of details within the timeline section.
+ * @param {HTMLElement} element - The timeline content element that was clicked.
+ */
 function toggleDetails(element) {
     const hiddenDetails = element.querySelector('.hidden-details');
-    if (hiddenDetails.style.display === 'none') {
-        hiddenDetails.style.display = 'block';
-        hiddenDetails.style.animation = 'fadeInUp 0.5s ease';
-    } else {
-        hiddenDetails.style.display = 'none';
+    if (hiddenDetails) {
+        hiddenDetails.style.display = hiddenDetails.style.display === 'block' ? 'none' : 'block';
     }
 }
 
-// Backend Integration
-const BACKEND_URL = 'https://portfolio-backend.onrender.com';
-
-async function performCalculation(input) {
-    try {
-        showNotification('Calculating...', 'loading');
-        const response = await fetch(`${BACKEND_URL}/calculate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ input }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        showNotification('Calculation complete!', 'success');
-        return data.result;
-    } catch (error) {
-        console.error('Calculation service error:', error);
-        showNotification('Calculation failed. Please try again.', 'error');
-        return null;
-    }
-}
-
-// Project Interactions
-async function openProject(projectId) {
-    let result = null;
-    try {
-        // Attempt calculation but don't block project display if it fails
-        const sampleInput = 42;
-        result = await performCalculation(sampleInput);
-    } catch (error) {
-        console.log('Calculation skipped - showing project details anyway');
-    }
-    
-    const projectDetails = {
-        elevator: {
-            title: 'Real-Time Elevator Safety System',
-            description: 'Revolutionary safety monitoring system that detects power failures and passenger presence using advanced sensor integration.',
-            features: [
-                'Real-time power failure detection',
-                'Load cell-based passenger detection',
-                'GSM emergency notifications',
-                'Automated safety protocols'
-            ],
-            tech: ['ESP32', 'HX711', 'GSM Module', 'Load Cells', 'Sensors'],
-            impact: 'Prevents elevator accidents and ensures passenger safety through intelligent monitoring'
-        },
-        stethograph: {
-            title: 'Multichannel Stethograph',
-            description: 'Advanced healthcare monitoring tool for precise heart signal analysis and abnormal heartbeat detection.',
-            features: [
-                'Multi-channel heart monitoring',
-                'Vibration data analysis',
-                'Abnormal heartbeat detection',
-                'Real-time signal processing'
-            ],
-            tech: ['Raspberry Pi 3B', 'Python', 'Sensors', 'Signal Processing'],
-            impact: 'Revolutionizes healthcare monitoring with precise cardiac analysis'
-        },
-        iot: {
-            title: 'IoT Micro Projects',
-            description: 'Comprehensive suite of automation and monitoring prototypes focusing on real-time sensing and intelligent control.',
-            features: [
-                'Real-time environmental sensing',
-                'Automated control systems',
-                'Remote monitoring capabilities',
-                'Scalable IoT architecture'
-            ],
-            tech: ['ESP32', 'Arduino', 'Raspberry Pi', 'Various Sensors'],
-            impact: 'Creates smart ecosystems for automation and monitoring solutions'
-        }
-    };
-    
+/**
+ * Displays an alert with the details of a selected project.
+ * @param {string} projectId - The ID of the project to display (e.g., 'elevator').
+ */
+function openProject(projectId) {
     const project = projectDetails[projectId];
     if (!project) {
-        showNotification('Project details not found. Please try again.');
+        showNotification('Project details not found.', 'error');
         return;
     }
     
-    let message = `🚀 ${project.title}\n\n${project.description}\n\nKey Features:\n• ${project.features.join('\n• ')}\n\nTechnologies: ${project.tech.join(', ')}\n\nImpact: ${project.impact}`;
-    
-    if (result !== null) {
-        message += `\n\nCalculation Result: ${result}`;
-    }
+    const message = `🚀 ${project.title}\n\n` +
+                    `${project.description}\n\n` +
+                    `Key Features:\n• ${project.features.join('\n• ')}\n\n` +
+                    `Tech Stack: ${project.tech.join(', ')}\n\n` +
+                    `Impact: ${project.impact}`;
     
     alert(message);
 }
 
-// Contact Interactions
+// --- Contact and Utility Functions ---
+
+/**
+ * Copies the email address to the clipboard.
+ */
 function copyEmail() {
     const email = 'hemanth.1si22ei049@gmail.com';
-    
-    // Try using the Clipboard API first
-    if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(email)
-            .then(() => {
-                showNotification('Email copied to clipboard! 📧');
-            })
-            .catch(() => {
-                fallbackCopyEmail(email);
-            });
-    } else {
-        fallbackCopyEmail(email);
-    }
+    navigator.clipboard.writeText(email).then(() => {
+        showNotification('Email copied to clipboard! 📧', 'success');
+    }).catch(() => {
+        showNotification('Failed to copy. Please copy manually.', 'error');
+    });
 }
 
-function fallbackCopyEmail(email) {
-    // Create a temporary input element
-    const textArea = document.createElement('textarea');
-    textArea.value = email;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    textArea.style.top = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-        document.execCommand('copy');
-        showNotification('Email copied to clipboard! 📧');
-    } catch (err) {
-        showNotification('Failed to copy email. Please copy manually: ' + email);
-    }
-    
-    document.body.removeChild(textArea);
-}
-
+/**
+ * Initiates the download of the CV file.
+ */
 function downloadCV() {
-    // Using a relative path to the CV file
-    const cvUrl = 'assets/Hemanth_S_Kumar_CV.pdf';
-    
-    // Create a temporary link element
     const link = document.createElement('a');
-    link.href = cvUrl;
-    link.download = 'Hemanth_S_Kumar_CV.pdf';
-    link.target = '_blank';
-    
-    // Add error handling
-    link.onerror = () => {
-        showNotification('Failed to download CV. Please try again later.');
-    };
-    
-    // Append to body, click, and remove
+    // IMPORTANT: Make sure you have a file named 'Hemanth_S_Kumar_Resume.pdf' in an 'assets' folder.
+    link.href = 'assets/Hemanth_S_Kumar_CV.pdf'; 
+    link.download = 'Hemanth_S_Kumar_Resume.pdf';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    showNotification('Downloading CV... 📄');
+    showNotification('Downloading CV...', 'info');
 }
 
+/**
+ * Opens the GitHub profile in a new tab.
+ */
 function openGitHub() {
-    window.open('https://github.com/HEMANTH-S-KUMAR-1', '_blank');
+    window.open('https://github.com/HEMANTH-S-KUMAR-1', '_blank', 'noopener,noreferrer');
 }
 
+/**
+ * Opens the LinkedIn profile in a new tab.
+ */
+function openLinkedIn() {
+    window.open('https://www.linkedin.com/in/hemanth-s-kumar-207215325', '_blank', 'noopener,noreferrer');
+}
+
+/**
+ * Opens the default email client with a pre-filled message.
+ */
 function startProject() {
     const email = 'hemanth.1si22ei049@gmail.com';
-    const subject = 'Project Collaboration';
-    const body = 'Hi Hemanth! I\'d love to collaborate on an exciting embedded systems project. Let\'s innovate together!';
-    
-    // Create a modal for email options
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: var(--primary-bg);
-        padding: 2rem;
-        border-radius: 10px;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-        z-index: 1000;
-        text-align: center;
-        border: 2px solid var(--accent-cyan);
-    `;
-    
-    modal.innerHTML = `
-        <h3 style="margin-bottom: 1rem; color: var(--accent-cyan);">Choose Email Option</h3>
-        <div style="display: flex; gap: 1rem; justify-content: center;">
-            <button onclick="openGmail()" style="
-                padding: 0.8rem 1.5rem;
-                background: linear-gradient(45deg, var(--accent-pink), var(--accent-orange));
-                border: none;
-                border-radius: 5px;
-                color: white;
-                cursor: pointer;
-                font-weight: bold;
-            ">Open in Gmail</button>
-            <button onclick="openDesktopEmail()" style="
-                padding: 0.8rem 1.5rem;
-                background: linear-gradient(45deg, var(--accent-cyan), var(--accent-green));
-                border: none;
-                border-radius: 5px;
-                color: white;
-                cursor: pointer;
-                font-weight: bold;
-            ">Open in Email App</button>
-        </div>
-        <button onclick="closeModal()" style="
-            margin-top: 1rem;
-            padding: 0.5rem 1rem;
-            background: transparent;
-            border: 1px solid var(--accent-cyan);
-            border-radius: 5px;
-            color: var(--accent-cyan);
-            cursor: pointer;
-        ">Cancel</button>
-    `;
-    
-    // Add overlay
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.7);
-        z-index: 999;
-    `;
-    
-    document.body.appendChild(overlay);
-    document.body.appendChild(modal);
-    
-    // Prevent scrolling when modal is open
-    document.body.style.overflow = 'hidden';
-}
-
-function openGmail() {
-    const email = 'hemanth.1si22ei049@gmail.com';
-    const subject = 'Project Collaboration';
-    const body = 'Hi Hemanth! I\'d love to collaborate on an exciting embedded systems project. Let\'s innovate together!';
-    
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(gmailUrl, '_blank');
-    closeModal();
-}
-
-function openDesktopEmail() {
-    const email = 'hemanth.1si22ei049@gmail.com';
-    const subject = 'Project Collaboration';
-    const body = 'Hi Hemanth! I\'d love to collaborate on an exciting embedded systems project. Let\'s innovate together!';
-    
+    const subject = 'Project Collaboration Inquiry';
+    const body = `Hi Hemanth,\n\nI saw your portfolio and was impressed by your work in embedded systems. I'd like to discuss a potential project collaboration.\n\nBest regards,`;
     const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(mailtoLink, '_blank');
-    closeModal();
+    window.location.href = mailtoLink;
 }
 
-function closeModal() {
-    const modal = document.querySelector('div[style*="position: fixed"]');
-    const overlay = document.querySelector('div[style*="background: rgba(0, 0, 0, 0.7)"]');
-    
-    if (modal) document.body.removeChild(modal);
-    if (overlay) document.body.removeChild(overlay);
-    
-    // Restore scrolling
-    document.body.style.overflow = 'auto';
-}
-
+/**
+ * Displays a temporary notification message at the bottom-right of the screen.
+ * @param {string} message - The message to display.
+ * @param {string} [type='info'] - The type of notification ('info', 'success', 'error').
+ */
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
+    const color = type === 'error' ? 'var(--accent-orange)' : type === 'success' ? 'var(--accent-green)' : 'var(--accent-cyan)';
     
-    // Add styles
     notification.style.cssText = `
         position: fixed;
         bottom: 20px;
         right: 20px;
         padding: 15px 25px;
-        background: ${type === 'error' ? '#ff4444' : type === 'success' ? '#00C851' : type === 'loading' ? '#33b5e5' : '#2BBBAD'};
-        color: white;
-        border-radius: 5px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        z-index: 1000;
-        animation: slideIn 0.5s ease-out;
+        background: ${color};
+        color: var(--primary-bg);
+        font-weight: bold;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        z-index: 1001;
+        transform: translateX(120%);
+        transition: transform 0.5s ease-in-out;
     `;
-    
+    notification.textContent = message;
     document.body.appendChild(notification);
     
-    // Auto remove after 3 seconds
     setTimeout(() => {
-        notification.style.animation = 'slideOut 0.5s ease-out';
+        notification.style.transform = 'translateX(0)';
+    }, 10);
+
+    setTimeout(() => {
+        notification.style.transform = 'translateX(120%)';
         setTimeout(() => {
-            document.body.removeChild(notification);
+            if (document.body.contains(notification)) {
+                document.body.removeChild(notification);
+            }
         }, 500);
-    }, 3000);
+    }, 3500);
 }
 
-// Add animation keyframes
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
-
-// Dynamic background circuit animation
-function createCircuitLine() {
+// --- Dynamic Background & Animations ---
+/**
+ * Creates and appends animated particles to the background.
+ */
+function createCircuitParticles() {
     const circuitBg = document.querySelector('.circuit-bg');
-    
-    // Create main circuit line
-    const line = document.createElement('div');
-    line.className = 'circuit-line';
-    
-    const width = Math.random() * 200 + 50;
-    const height = 2;
-    const top = Math.random() * 100;
-    const left = Math.random() * 100;
-    const delay = Math.random() * 3;
-    
-    line.style.cssText = `
-        width: ${width}px;
-        height: ${height}px;
-        top: ${top}%;
-        left: ${left}%;
-        animation-delay: ${delay}s;
-        opacity: 0.1;
-    `;
-    
-    circuitBg.appendChild(line);
-    
-    // Create circuit dots
-    const dot = document.createElement('div');
-    dot.className = 'circuit-dot';
-    dot.style.cssText = `
-        top: ${top}%;
-        left: ${left + width}%;
-        animation-delay: ${delay + 0.5}s;
-    `;
-    
-    circuitBg.appendChild(dot);
-    
-    // Create circuit node
-    const node = document.createElement('div');
-    node.className = 'circuit-node';
-    node.style.cssText = `
-        top: ${top + Math.random() * 20 - 10}%;
-        left: ${left + Math.random() * width}%;
-        animation-delay: ${delay + 1}s;
-    `;
-    
-    circuitBg.appendChild(node);
-    
-    // Create circuit connection
-    const connection = document.createElement('div');
-    connection.className = 'circuit-connection';
-    connection.style.cssText = `
-        width: ${Math.random() * 100 + 50}px;
-        top: ${top + Math.random() * 20}%;
-        left: ${left + Math.random() * width}%;
-        transform: rotate(${Math.random() * 360}deg);
-        animation-delay: ${delay + 1.5}s;
-    `;
-    
-    circuitBg.appendChild(connection);
-    
-    // Create floating particles
-    for (let i = 0; i < 3; i++) {
+    if (!circuitBg) return;
+
+    const particleCount = 20;
+    for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'circuit-particle';
-        particle.style.cssText = `
-            top: ${Math.random() * 100}%;
-            left: ${Math.random() * 100}%;
-            animation-delay: ${Math.random() * 5}s;
-        `;
+        particle.style.left = `${Math.random() * 100}vw`;
+        particle.style.animationDelay = `${Math.random() * 20}s`;
+        particle.style.animationDuration = `${Math.random() * 10 + 10}s`;
         circuitBg.appendChild(particle);
     }
-    
-    // Remove after animation
-    setTimeout(() => {
-        if (circuitBg.contains(line)) circuitBg.removeChild(line);
-        if (circuitBg.contains(dot)) circuitBg.removeChild(dot);
-        if (circuitBg.contains(node)) circuitBg.removeChild(node);
-        if (circuitBg.contains(connection)) circuitBg.removeChild(connection);
-        const particles = circuitBg.querySelectorAll('.circuit-particle');
-        particles.forEach(particle => {
-            if (circuitBg.contains(particle)) circuitBg.removeChild(particle);
-        });
-    }, 6000);
 }
 
-// Create new circuit elements periodically
-setInterval(createCircuitLine, 2000);
+/**
+ * Sets up an Intersection Observer to add a 'visible' class to sections
+ * when they enter the viewport, triggering a fade-in animation.
+ */
+function setupIntersectionObserver() {
+    const options = {
+        root: null,
+        rootMargin: '0px',
+        threshold: 0.1
+    };
 
-// Smooth scrolling for navigation
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-            target.scrollIntoView({
-                behavior: 'smooth',
-                block: 'start'
-            });
-        }
-    });
-});
+    const observer = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, options);
 
-// Parallax effect for hero section
-window.addEventListener('scroll', () => {
-    const scrolled = window.pageYOffset;
-    const hero = document.querySelector('.hero');
-    const rate = scrolled * -0.5;
-    
-    if (hero) {
-        hero.style.transform = `translateY(${rate}px)`;
-    }
-});
-
-// Add loading animation
-window.addEventListener('load', () => {
-    document.body.style.opacity = '0';
-    document.body.style.transition = 'opacity 0.5s ease';
-    
-    setTimeout(() => {
-        document.body.style.opacity = '1';
-    }, 100);
-});
-
-// Intersection Observer for animations
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-};
-
-const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-        if (entry.isIntersecting) {
-            entry.target.style.animation = 'fadeInUp 1s ease forwards';
-        }
-    });
-}, observerOptions);
-
-// Observe all sections
-document.addEventListener('DOMContentLoaded', () => {
-    const sections = document.querySelectorAll('.section');
-    sections.forEach(section => {
+    document.querySelectorAll('.section').forEach(section => {
         observer.observe(section);
     });
-}); 
+}
